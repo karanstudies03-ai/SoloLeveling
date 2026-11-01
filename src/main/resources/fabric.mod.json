@@ -1,31 +1,19 @@
 {
-	"schemaVersion": 1,
-	"id": "sololeveling",
-	"version": "${version}",
-	"name": "sololeveling",
-	"description": "This is an example description! Tell everyone what your mod is about!",
-	"authors": [
-		"Me!"
-	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
-	},
-	"license": "CC0-1.0",
-	"icon": "assets/sololeveling/icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"main": [
-			"com.ender.sololeveling.Sololeveling"
-		]
-	},
-	"mixins": [
-		"sololeveling.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=0.20.1",
-		"minecraft": "~1.21.11",
-		"java": ">=21",
-		"fabric-api": "*"
-	}
+  "schemaVersion": 1,
+  "id": "endersystem",
+  "version": "0.1.0",
+  "name": "EnderSystem",
+  "description": "A Solo Leveling inspired System: levels, ranks, stats, quests, gates and shadows. Phase 1: XP and level system.",
+  "authors": ["Ender"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.endersystem.EnderSystem"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
 }
