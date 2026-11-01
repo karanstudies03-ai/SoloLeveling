@@ -23,7 +23,7 @@ public class SystemCommand {
                     return 1;
                 })
                 .then(CommandManager.literal("addxp")
-                    .requires(src -> src.hasPermissionLevel(2))
+                    .requires(CommandManager.requirePermissionLevel(CommandManager.GAMEMASTERS_CHECK))
                     .then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
                         .executes(ctx -> {
                             ServerPlayerEntity p = ctx.getSource().getPlayerOrThrow();
@@ -31,7 +31,7 @@ public class SystemCommand {
                             return 1;
                         })))
                 .then(CommandManager.literal("reset")
-                    .requires(src -> src.hasPermissionLevel(2))
+                    .requires(CommandManager.requirePermissionLevel(CommandManager.GAMEMASTERS_CHECK))
                     .executes(ctx -> {
                         ServerPlayerEntity p = ctx.getSource().getPlayerOrThrow();
                         p.setAttached(ModAttachments.SYSTEM, SystemData.DEFAULT);
