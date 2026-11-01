@@ -2,6 +2,9 @@ package com.endersystem;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.codec.PacketCodecs;
 
 /** All System data for one player. Immutable: every change returns a new copy. */
 public record SystemData(int level, int xp, int statPoints,
@@ -10,6 +13,7 @@ public record SystemData(int level, int xp, int statPoints,
 
     public static final int MAX_LEVEL = 100;
     public static final int POINTS_PER_LEVEL = 3;
+    public static final String[] STAT_NAMES = {"STR", "AGI", "VIT", "INT", "DEF", "LUK"};
 
     public static final SystemData DEFAULT =
             new SystemData(1, 0, 0, 10, 10, 10, 10, 10, 10);
@@ -25,6 +29,9 @@ public record SystemData(int level, int xp, int statPoints,
             Codec.INT.fieldOf("def").forGetter(SystemData::defence),
             Codec.INT.fieldOf("luk").forGetter(SystemData::luck)
     ).apply(i, SystemData::new));
+
+    /** Used to sync the data to the owning client. */
+    public static final PacketCodec<ByteBuf, SystemData> PACKET_CODEC = PacketCodecs.codec(CODEC);
 
     public static int xpForNextLevel(int level) {
         return 100 + level * 50;
@@ -43,7 +50,30 @@ public record SystemData(int level, int xp, int statPoints,
         return rankFor(level);
     }
 
-    /** Adds XP and handles multiple level-ups. */
+    /** stat index: 0 STR, 1 AGI, 2 VIT, 3 INT, 4 DEF, 5 LUK */
+    public int stat(int index) {
+        return switch (index) {
+            case 0 -> strength;
+            case 1 -> agility;
+            case 2 -> vitality;
+            case 3 -> intelligence;
+            case 4 -> defence;
+            default -> luck;
+        };
+    }
+
+    /** Spends one stat point. Returns this (same instance) if it is not possible. */
+    public SystemData withStatAdded(int index) {
+        if (statPoints <= 0 || index < 0 || index > 5) return this;
+        return new SystemData(level, xp, statPoints - 1,
+                strength + (index == 0 ? 1 : 0),
+                agility + (index == 1 ? 1 : 0),
+                vitality + (index == 2 ? 1 : 0),
+                intelligence + (index == 3 ? 1 : 0),
+                defence + (index == 4 ? 1 : 0),
+                luck + (index == 5 ? 1 : 0));
+    }
+
     public SystemData addXp(int amount) {
         if (level >= MAX_LEVEL) return this;
         int lvl = level, x = xp + amount, pts = statPoints;

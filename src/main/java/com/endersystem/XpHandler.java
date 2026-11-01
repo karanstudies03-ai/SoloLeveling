@@ -1,6 +1,7 @@
 package com.endersystem;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.boss.dragon.EnderDragonEntity;
 import net.minecraft.entity.mob.HostileEntity;
@@ -35,10 +36,8 @@ public class XpHandler {
                 .formatted(Formatting.AQUA), true);
 
         if (after.level() > before.level()) {
-            player.sendMessage(Text.literal("[SYSTEM] LEVEL UP! You are now Level "
-                    + after.level() + " (Rank " + after.rank() + "). +"
-                    + (after.statPoints() - before.statPoints()) + " stat points.")
-                    .formatted(Formatting.GOLD, Formatting.BOLD), false);
+            ServerPlayNetworking.send(player, new ModPackets.LevelUpPayload(
+                    after.level(), after.statPoints() - before.statPoints()));
         }
     }
 }

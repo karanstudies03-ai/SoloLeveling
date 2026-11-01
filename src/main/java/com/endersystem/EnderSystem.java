@@ -1,6 +1,8 @@
 package com.endersystem;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,8 +13,16 @@ public class EnderSystem implements ModInitializer {
     @Override
     public void onInitialize() {
         ModAttachments.init();
+        ModPackets.init();
         XpHandler.init();
         SystemCommand.init();
-        LOGGER.info("EnderSystem Phase 1 loaded.");
+
+        // Re-apply stat bonuses whenever a player joins or respawns.
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+                StatEffects.apply(handler.player));
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
+                StatEffects.apply(newPlayer));
+
+        LOGGER.info("EnderSystem loaded.");
     }
 }

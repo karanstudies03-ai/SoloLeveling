@@ -1,17 +1,19 @@
 package com.endersystem;
 
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.minecraft.util.Identifier;
 
 public class ModAttachments {
-    /** Saved with the player, and kept after death. */
+    /** Saved with the player, kept after death, and synced ONLY to that player. */
     public static final AttachmentType<SystemData> SYSTEM = AttachmentRegistry.create(
             Identifier.of(EnderSystem.MOD_ID, "system_data"),
             builder -> builder
                     .initializer(() -> SystemData.DEFAULT)
                     .persistent(SystemData.CODEC)
-                    .copyOnDeath());
+                    .copyOnDeath()
+                    .syncWith(SystemData.PACKET_CODEC, AttachmentSyncPredicate.targetOnly()));
 
     public static void init() {
         // Loading this class registers the attachment.
