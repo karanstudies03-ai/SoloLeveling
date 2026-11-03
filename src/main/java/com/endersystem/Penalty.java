@@ -1,15 +1,14 @@
 package com.endersystem;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
@@ -18,8 +17,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
+import net.minecraft.world.World;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,19 +27,16 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * The Penalty Quest. If the daily quest is failed, the player is teleported to a sand arena
- * floating high above the Overworld and must survive 2 minutes against Poison-Toothed Giant
- * Desert Centipedes. Surviving gives a reward and sends the player back. Dying ends the penalty.
+ * The Penalty Quest. If the daily quest is failed, the player is teleported to the Penalty Zone
+ * (a huge desert, see Arena.java) and must survive 2 minutes against 3 powerful
+ * Poison-Toothed Giant Desert Centipedes. Surviving gives a reward and sends the player back.
+ * Dying ends the penalty.
  */
 public class Penalty {
     public static final String TAG = "endersystem_penalty";
 
-    // Arena: a round sand platform, far away and high up, ringed by invisible barrier walls.
-    private static final int ARENA_X = 30000;
-    private static final int ARENA_Y = 290;
-    private static final int ARENA_Z = 30000;
-    private static final int RADIUS = 30;
-
+    private static final int CENTIPEDE_COUNT = 3;
+    private static final int STRENGTH_AMPLIFIER = 4; // Strength V
     private static final int REWARD_POINTS = 3;
 
     private static final Map<UUID, Integer> LEFT = new HashMap<>();
@@ -71,6 +66,15 @@ public class Penalty {
                 victim.addStatusEffect(new StatusEffectInstance(StatusEffects.POISON, 120, 0));
             }
         });
+
+        // No natural monsters (creepers!) in the Penalty Zone: they would blow up the ground.
+        ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
+            if (entity instanceof HostileEntity && !(entity instanceof DesertCentipedeEntity)
+                    && world.getRegistryKey().equals(World.OVERWORLD)
+                    && Arena.contains(entity.getX(), entity.getZ())) {
+                world.getServer().execute(entity::discard);
+            }
+        });
     }
 
     // ------------------------------------------------------------------ start / end
@@ -83,14 +87,16 @@ public class Penalty {
         if (current.active()) return false;
 
         ServerWorld arena = server.getOverworld();
-        buildArena(arena);
+        // Make sure there is ground under the landing spot (a few chunks around the centre)
+        Arena.ensureChunks(arena, Arena.CENTER_X >> 4, Arena.CENTER_Z >> 4, 12, Integer.MAX_VALUE);
 
         String dim = p.getEntityWorld().getRegistryKey().getValue().toString();
         p.setAttached(ModAttachments.PENALTY, new PenaltyData(true, PenaltyData.DURATION_TICKS, dim,
                 p.getX(), p.getY(), p.getZ(), p.getYaw(), p.getPitch()));
         LEFT.put(p.getUuid(), PenaltyData.DURATION_TICKS);
 
-        p.teleport(arena, ARENA_X + 0.5, ARENA_Y + 2, ARENA_Z + 0.5, Set.of(), 0f, 0f, true);
+        double landY = Arena.surfaceY(Arena.CENTER_X, Arena.CENTER_Z) + 1;
+        p.teleport(arena, Arena.CENTER_X + 0.5, landY, Arena.CENTER_Z + 0.5, Set.of(), 0f, 0f, true);
         ModPackets.notify(p, "PENALTY QUEST", "Daily Quest failed!", "Survive 2 minutes");
         return true;
     }
@@ -145,12 +151,14 @@ public class Penalty {
 
         ServerWorld arena = server.getOverworld();
 
-        // Keep a few centipedes alive: first wave after 1 second, then top up every 5 seconds
-        if (elapsed == 20 || left % 100 == 0) {
-            int target = Math.min(8, 4 + elapsed / 400);
-            int alive = countCentipedes(arena);
-            int toSpawn = Math.min(Math.max(0, target - alive), elapsed == 20 ? 4 : 2);
-            spawnCentipedes(arena, p, toSpawn);
+        // Keep generating desert ahead of the player (max 2 chunks per tick, no lag spikes)
+        if (Arena.contains(p.getX(), p.getZ())) {
+            Arena.ensureChunks(arena, p.getBlockX() >> 4, p.getBlockZ() >> 4, 25, 2);
+        }
+
+        // Exactly 3 centipedes, spawned once, 1 second after arriving
+        if (elapsed == 20) {
+            spawnCentipedes(arena, p, CENTIPEDE_COUNT);
         }
 
         if (left <= 0) {
@@ -163,43 +171,29 @@ public class Penalty {
         }
     }
 
-    // ------------------------------------------------------------------ arena + mobs
-
-    private static Box arenaBox() {
-        int r = RADIUS + 6;
-        return new Box(ARENA_X - r, ARENA_Y - 5, ARENA_Z - r, ARENA_X + r, ARENA_Y + 40, ARENA_Z + r);
-    }
-
-    private static int countCentipedes(ServerWorld world) {
-        return world.getEntitiesByClass(DesertCentipedeEntity.class, arenaBox(),
-                e -> e.isAlive() && e.getCommandTags().contains(TAG)).size();
-    }
+    // ------------------------------------------------------------------ mobs
 
     private static void spawnCentipedes(ServerWorld world, ServerPlayerEntity p, int count) {
         for (int i = 0; i < count; i++) {
             DesertCentipedeEntity c = ModEntities.DESERT_CENTIPEDE.create(world, SpawnReason.EVENT);
             if (c == null) continue;
 
-            double angle = RNG.nextDouble() * Math.PI * 2;
-            double dist = 10 + RNG.nextDouble() * 8;
-            double x = p.getX() + Math.cos(angle) * dist;
-            double z = p.getZ() + Math.sin(angle) * dist;
+            // spread around the player, 25-35 blocks away
+            double angle = (Math.PI * 2 / count) * i + RNG.nextDouble() * 0.6;
+            double dist = 25 + RNG.nextDouble() * 10;
+            int x = (int) Math.floor(p.getX() + Math.cos(angle) * dist);
+            int z = (int) Math.floor(p.getZ() + Math.sin(angle) * dist);
+            int y = Arena.surfaceY(x, z) + 1;
 
-            // keep inside the arena
-            double dx = x - ARENA_X, dz = z - ARENA_Z;
-            double len = Math.sqrt(dx * dx + dz * dz);
-            double maxLen = RADIUS - 4;
-            if (len > maxLen) {
-                x = ARENA_X + dx / len * maxLen;
-                z = ARENA_Z + dz / len * maxLen;
-            }
-
-            c.refreshPositionAndAngles(x, ARENA_Y + 2, z, RNG.nextFloat() * 360f, 0f);
+            c.refreshPositionAndAngles(x + 0.5, y, z + 0.5, RNG.nextFloat() * 360f, 0f);
             c.setPersistent();
             c.addCommandTag(TAG);
             c.setCustomName(Text.literal("[B-Rank] Poison-Toothed Giant Desert Centipede")
                     .formatted(Formatting.RED));
             c.setCustomNameVisible(true);
+            // Strength V, permanent, no particles
+            c.addStatusEffect(new StatusEffectInstance(StatusEffects.STRENGTH,
+                    StatusEffectInstance.INFINITE, STRENGTH_AMPLIFIER, false, false));
             world.spawnEntity(c);
         }
     }
@@ -209,35 +203,8 @@ public class Penalty {
             if (other.getAttachedOrCreate(ModAttachments.PENALTY).active()) return;
         }
         ServerWorld arena = server.getOverworld();
-        List<DesertCentipedeEntity> mobs = arena.getEntitiesByClass(DesertCentipedeEntity.class, arenaBox(),
+        List<DesertCentipedeEntity> mobs = arena.getEntitiesByClass(DesertCentipedeEntity.class, Arena.box(),
                 e -> e.getCommandTags().contains(TAG));
         for (DesertCentipedeEntity m : mobs) m.discard();
-    }
-
-    private static void buildArena(ServerWorld w) {
-        BlockPos.Mutable pos = new BlockPos.Mutable();
-        if (w.getBlockState(pos.set(ARENA_X, ARENA_Y, ARENA_Z)).isOf(Blocks.SANDSTONE)) return; // already built
-
-        BlockState sandstone = Blocks.SANDSTONE.getDefaultState();
-        BlockState sand = Blocks.SAND.getDefaultState();
-        BlockState barrier = Blocks.BARRIER.getDefaultState();
-        int flags = Block.NOTIFY_LISTENERS;
-
-        int outer = RADIUS + 2;
-        for (int dx = -outer; dx <= outer; dx++) {
-            for (int dz = -outer; dz <= outer; dz++) {
-                int d2 = dx * dx + dz * dz;
-                int x = ARENA_X + dx;
-                int z = ARENA_Z + dz;
-                if (d2 <= RADIUS * RADIUS) {
-                    w.setBlockState(pos.set(x, ARENA_Y, z), sandstone, flags);
-                    w.setBlockState(pos.set(x, ARENA_Y + 1, z), sand, flags);
-                } else if (d2 <= outer * outer) {
-                    for (int y = ARENA_Y + 1; y <= ARENA_Y + 14; y++) {
-                        w.setBlockState(pos.set(x, y, z), barrier, flags);
-                    }
-                }
-            }
-        }
     }
 }

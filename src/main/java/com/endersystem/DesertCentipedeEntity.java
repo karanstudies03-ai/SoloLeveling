@@ -21,19 +21,32 @@ import net.minecraft.world.World;
  * and recoloured with its own texture. Its bite poisons (see Penalty.java).
  */
 public class DesertCentipedeEntity extends SilverfishEntity {
+    private boolean sizeFixed = false;
 
     public DesertCentipedeEntity(EntityType<? extends SilverfishEntity> type, World world) {
         super(type, world);
+        // The SCALE attribute is only applied to the hitbox when the size is recalculated.
+        this.calculateDimensions();
     }
 
     public static DefaultAttributeContainer.Builder createAttributes() {
         return HostileEntity.createHostileAttributes()
-                .add(EntityAttributes.MAX_HEALTH, 60.0)
-                .add(EntityAttributes.MOVEMENT_SPEED, 0.34)
+                .add(EntityAttributes.MAX_HEALTH, 120.0)
+                .add(EntityAttributes.MOVEMENT_SPEED, 0.36)
                 .add(EntityAttributes.ATTACK_DAMAGE, 5.0)
-                .add(EntityAttributes.FOLLOW_RANGE, 48.0)
-                .add(EntityAttributes.ARMOR, 4.0)
-                .add(EntityAttributes.SCALE, 5.0);
+                .add(EntityAttributes.FOLLOW_RANGE, 64.0)
+                .add(EntityAttributes.ARMOR, 8.0)
+                .add(EntityAttributes.KNOCKBACK_RESISTANCE, 0.5)
+                .add(EntityAttributes.SCALE, 6.0);
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (!sizeFixed) {
+            sizeFixed = true;
+            this.calculateDimensions(); // make sure the big hitbox is used
+        }
     }
 
     @Override

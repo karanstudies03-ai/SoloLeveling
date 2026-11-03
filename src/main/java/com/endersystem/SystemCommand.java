@@ -29,6 +29,15 @@ public class SystemCommand {
                                     d.addGold(IntegerArgumentType.getInteger(ctx, "amount")));
                             return 1;
                         })))
+                .then(CommandManager.literal("addpoints")
+                    .then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
+                        .executes(ctx -> {
+                            ServerPlayerEntity p = ctx.getSource().getPlayerOrThrow();
+                            SystemData d = p.getAttachedOrCreate(ModAttachments.SYSTEM);
+                            p.setAttached(ModAttachments.SYSTEM,
+                                    d.addPoints(IntegerArgumentType.getInteger(ctx, "amount")));
+                            return 1;
+                        })))
                 .then(CommandManager.literal("penalty")
                     .executes(ctx -> {
                         ServerPlayerEntity p = ctx.getSource().getPlayerOrThrow();

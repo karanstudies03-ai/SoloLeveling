@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "endersystem",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "name": "EnderSystem",
   "description": "A Solo Leveling inspired System: levels, ranks, stats, daily quests, shop and more.",
   "authors": ["Ender"],
