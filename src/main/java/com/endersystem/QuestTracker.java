@@ -2,6 +2,7 @@ package com.endersystem;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.stat.StatHandler;
 import net.minecraft.stat.Stats;
@@ -18,7 +19,8 @@ import java.util.UUID;
  *  - crouch: counts every time the player STARTS crouching
  *  - jump:   vanilla jump statistic
  *  - sprint: vanilla sprint-distance statistic
- * The quest resets every real-world day. Reward is given once when all three are done.
+ * The quest resets at midnight (the server's local time). If the previous day's quest was
+ * not completed, the player gets the Penalty Quest (see Penalty.java).
  */
 public class QuestTracker {
     private static final Set<UUID> SNEAKING = new HashSet<>();
@@ -28,7 +30,7 @@ public class QuestTracker {
     public static void init() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerPlayerEntity p : server.getPlayerManager().getPlayerList()) {
-                tick(p);
+                tick(server, p);
             }
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
@@ -39,12 +41,18 @@ public class QuestTracker {
         });
     }
 
-    private static void tick(ServerPlayerEntity p) {
+    private static void tick(MinecraftServer server, ServerPlayerEntity p) {
+        if (!p.isAlive()) return;
+
         QuestData original = p.getAttachedOrCreate(ModAttachments.QUESTS);
         QuestData q = original;
 
+        // Midnight reset (calendar day changed)
         int today = (int) LocalDate.now().toEpochDay();
+        boolean missed = false;
         if (q.day() != today) {
+            // Penalty only if the player was around yesterday (day 0 = brand new player)
+            missed = q.day() != 0 && today - q.day() == 1 && !q.claimed();
             q = QuestData.fresh(today);
         }
 
@@ -76,6 +84,10 @@ public class QuestTracker {
 
         if (!q.equals(original)) {
             p.setAttached(ModAttachments.QUESTS, q);
+        }
+
+        if (missed) {
+            Penalty.start(server, p, false);
         }
     }
 }

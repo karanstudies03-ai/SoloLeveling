@@ -1,11 +1,13 @@
 package com.endersystem.client;
 
 import com.endersystem.EnderSystem;
+import com.endersystem.ModEntities;
 import com.endersystem.ModPackets;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.option.KeyBinding;
@@ -47,6 +49,9 @@ public class EnderSystemClient implements ClientModInitializer {
             }
         });
 
+        EntityRendererRegistry.register(ModEntities.DESERT_CENTIPEDE, CentipedeRenderer::new);
+
         LevelUpOverlay.init();
+        PenaltyHud.init();
     }
 }

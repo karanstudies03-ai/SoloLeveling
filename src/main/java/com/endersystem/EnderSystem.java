@@ -12,11 +12,13 @@ public class EnderSystem implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        ModEntities.init();
         ModItems.init();
         ModAttachments.init();
         ModPackets.init();
         XpHandler.init();
         QuestTracker.init();
+        Penalty.init();
         SystemCommand.init();
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->

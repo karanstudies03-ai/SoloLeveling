@@ -13,6 +13,7 @@ public final class Holo {
     public static final int DARK = 0x061A33;
     public static final int GOLD = 0xFFD54F;
     public static final int GREEN = 0x66FF99;
+    public static final int RED = 0xFF5252;
 
     private Holo() {}
 
@@ -29,9 +30,30 @@ public final class Holo {
     }
 
     public static void panel(DrawContext c, int x, int y, int w, int h, float alpha) {
+        panel(c, x, y, w, h, alpha, CYAN);
+    }
+
+    public static void panel(DrawContext c, int x, int y, int w, int h, float alpha, int borderRgb) {
         c.fill(x, y, x + w, y + h, argb(DARK, 0.72f * alpha));
-        frame(c, x - 1, y - 1, w + 2, h + 2, argb(CYAN, 0.25f * alpha));
-        frame(c, x, y, w, h, argb(CYAN, alpha));
+        frame(c, x - 1, y - 1, w + 2, h + 2, argb(borderRgb, 0.25f * alpha));
+        frame(c, x, y, w, h, argb(borderRgb, alpha));
+    }
+
+    /** A hologram-style button (drawn by us; the real click is handled by an invisible widget). */
+    public static void button(DrawContext c, TextRenderer tr, int x, int y, int w, int h,
+                              String label, boolean enabled, boolean selected, boolean hover) {
+        int fill = selected ? 0x1E6FA8 : (hover && enabled ? 0x14507F : 0x0B2A4A);
+        c.fill(x, y, x + w, y + h, argb(fill, selected ? 0.95f : 0.8f));
+        if (selected || (hover && enabled)) {
+            frame(c, x - 1, y - 1, w + 2, h + 2, argb(CYAN, 0.3f));
+        }
+        boolean lit = enabled || selected;
+        frame(c, x, y, w, h, argb(lit ? CYAN : 0x3A5568, lit ? 1f : 0.6f));
+        if (selected) {
+            c.fill(x + 1, y + 1, x + 4, y + h - 1, argb(GOLD, 1f));
+        }
+        int textColor = selected ? 0xFFFFFF : (enabled ? BRIGHT : 0x6C8190);
+        centered(c, tr, label, x + w / 2, y + (h - 8) / 2, textColor, 1f, selected);
     }
 
     public static void text(DrawContext c, TextRenderer tr, String s, int x, int y, int rgb, float alpha) {

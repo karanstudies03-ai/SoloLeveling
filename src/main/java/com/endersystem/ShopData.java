@@ -12,13 +12,13 @@ public final class ShopData {
 
     public record BuyEntry(Item item, String usage, int price) {}
 
-    /** The materials from the design doc. Effects of the materials come in later phases. */
+    /** The materials from the design doc. Each one is eaten or drunk for a Level X buff (see ModItems). */
     public static final List<BuyEntry> BUY = List.of(
-            new BuyEntry(ModItems.BEAST_CORE, "Upgrade equipment", 200),
-            new BuyEntry(ModItems.DEMON_HEART, "Unlock magic", 600),
-            new BuyEntry(ModItems.DRAGON_SCALE, "Craft armour", 800),
-            new BuyEntry(ModItems.SHADOW_ESSENCE, "Upgrade shadows", 500),
-            new BuyEntry(ModItems.MONARCH_CORE, "Unlock ultimate skills", 3000)
+            new BuyEntry(ModItems.BEAST_CORE, "Eat: Strength X for 30s", 200),
+            new BuyEntry(ModItems.DEMON_HEART, "Eat: Regeneration X for 30s", 600),
+            new BuyEntry(ModItems.DRAGON_SCALE, "Eat: Resistance X for 30s", 800),
+            new BuyEntry(ModItems.SHADOW_ESSENCE, "Drink: Speed X for 30s", 500),
+            new BuyEntry(ModItems.MONARCH_CORE, "Drink: all 4 buffs X for 30s", 3000)
     );
 
     private static final Map<Item, Integer> SELL = new HashMap<>();

@@ -13,10 +13,16 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/** The holographic System window with tabs. The world stays visible behind it. Esc closes it. */
+/**
+ * The holographic System window with tabs. The world stays visible behind it. Esc closes it.
+ * All buttons are drawn in the hologram style by us; vanilla buttons are only used invisibly
+ * to receive the clicks.
+ */
 public class StatusScreen extends Screen {
 
     private enum Tab {
@@ -43,6 +49,7 @@ public class StatusScreen extends Screen {
             "attack damage", "move speed", "max health", "mana (soon)", "armor", "loot luck"};
 
     private Tab tab = lastTab;
+    private final List<ButtonWidget> tabButtons = new ArrayList<>();
     private final List<ButtonWidget> upgradeButtons = new ArrayList<>();
     private final List<ButtonWidget> buyButtons = new ArrayList<>();
 
@@ -55,23 +62,30 @@ public class StatusScreen extends Screen {
     private int panelY() { return top() + 32; }
     private int panelH() { return H - 32; }
 
+    /** An invisible vanilla button that only receives the click. */
+    private ButtonWidget clickArea(int x, int y, int w, int h, Runnable action) {
+        ButtonWidget b = ButtonWidget.builder(Text.empty(), btn -> action.run())
+                .dimensions(x, y, w, h)
+                .build();
+        b.setAlpha(0f);
+        addDrawableChild(b);
+        return b;
+    }
+
     @Override
     protected void init() {
+        tabButtons.clear();
         upgradeButtons.clear();
         buyButtons.clear();
 
         int tabX = winX() - TAB_W;
         int i = 0;
         for (Tab t : Tab.values()) {
-            ButtonWidget b = ButtonWidget.builder(Text.literal(t.label), btn -> {
-                        lastTab = t;
-                        tab = t;
-                        clearAndInit();
-                    })
-                    .dimensions(tabX, panelY() + i * 26, 74, 22)
-                    .build();
-            b.active = t != tab;
-            addDrawableChild(b);
+            tabButtons.add(clickArea(tabX, panelY() + i * 26, 74, 22, () -> {
+                lastTab = t;
+                tab = t;
+                clearAndInit();
+            }));
             i++;
         }
 
@@ -79,12 +93,8 @@ public class StatusScreen extends Screen {
             for (int s = 0; s < 6; s++) {
                 final int stat = s;
                 int ry = panelY() + 28 + s * 22;
-                ButtonWidget b = ButtonWidget.builder(Text.literal("+"),
-                                btn -> ClientPlayNetworking.send(new ModPackets.SpendPointPayload(stat)))
-                        .dimensions(winX() + W - 40, ry - 3, 28, 16)
-                        .build();
-                upgradeButtons.add(b);
-                addDrawableChild(b);
+                upgradeButtons.add(clickArea(winX() + W - 40, ry - 3, 28, 16,
+                        () -> ClientPlayNetworking.send(new ModPackets.SpendPointPayload(stat))));
             }
         }
 
@@ -92,12 +102,8 @@ public class StatusScreen extends Screen {
             for (int s = 0; s < ShopData.BUY.size(); s++) {
                 final int idx = s;
                 int ry = panelY() + 10 + s * 28;
-                ButtonWidget b = ButtonWidget.builder(Text.literal("Buy"),
-                                btn -> ClientPlayNetworking.send(new ModPackets.BuyPayload(idx)))
-                        .dimensions(winX() + W - 56, ry + 3, 44, 16)
-                        .build();
-                buyButtons.add(b);
-                addDrawableChild(b);
+                buyButtons.add(clickArea(winX() + W - 56, ry + 3, 44, 16,
+                        () -> ClientPlayNetworking.send(new ModPackets.BuyPayload(idx))));
             }
         }
     }
@@ -124,6 +130,11 @@ public class StatusScreen extends Screen {
         return false;
     }
 
+    private void drawBtn(DrawContext ctx, ButtonWidget b, String label, boolean selected, int mx, int my) {
+        Holo.button(ctx, textRenderer, b.getX(), b.getY(), b.getWidth(), b.getHeight(),
+                label, b.active, selected, b.isMouseOver(mx, my));
+    }
+
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -138,14 +149,20 @@ public class StatusScreen extends Screen {
         Holo.centered(ctx, textRenderer, tab.title, wx + W / 2, top + 9, Holo.BRIGHT, 1f, true);
         Holo.right(ctx, textRenderer, "GOLD  " + d.gold(), wx + W - 10, top + 9, Holo.GOLD, 1f);
 
-        switch (tab) {
-            case STATUS -> renderStatus(ctx, mc, d);
-            case UPGRADE -> renderUpgrade(ctx, d);
-            case QUESTS -> renderQuests(ctx);
-            case SHOP -> renderShop(ctx, d);
+        // Tab bar in the same theme
+        Tab[] tabs = Tab.values();
+        for (int i = 0; i < tabs.length && i < tabButtons.size(); i++) {
+            drawBtn(ctx, tabButtons.get(i), tabs[i].label, tabs[i] == tab, mouseX, mouseY);
         }
 
-        super.render(ctx, mouseX, mouseY, delta); // draws the buttons
+        switch (tab) {
+            case STATUS -> renderStatus(ctx, mc, d);
+            case UPGRADE -> renderUpgrade(ctx, d, mouseX, mouseY);
+            case QUESTS -> renderQuests(ctx);
+            case SHOP -> renderShop(ctx, d, mouseX, mouseY);
+        }
+
+        super.render(ctx, mouseX, mouseY, delta); // invisible click areas draw nothing
     }
 
     private void renderStatus(DrawContext ctx, MinecraftClient mc, SystemData d) {
@@ -185,7 +202,7 @@ public class StatusScreen extends Screen {
                 rx + 12, py + ph - 16, ptsColor, 1f);
     }
 
-    private void renderUpgrade(DrawContext ctx, SystemData d) {
+    private void renderUpgrade(DrawContext ctx, SystemData d, int mx, int my) {
         int wx = winX();
         int py = panelY();
         int ph = panelH();
@@ -202,9 +219,17 @@ public class StatusScreen extends Screen {
             Holo.text(ctx, textRenderer, EFFECTS[i], wx + 84, ry + 2, Holo.DIM, 1f);
             Holo.right(ctx, textRenderer, SystemData.UPGRADE_COST + " pts", wx + W - 46, ry + 2, Holo.GOLD, 1f);
             if (i < upgradeButtons.size()) {
-                upgradeButtons.get(i).active = d.statPoints() >= SystemData.UPGRADE_COST;
+                ButtonWidget b = upgradeButtons.get(i);
+                b.active = d.statPoints() >= SystemData.UPGRADE_COST;
+                drawBtn(ctx, b, "+", false, mx, my);
             }
         }
+    }
+
+    private static String untilMidnight() {
+        LocalDateTime now = LocalDateTime.now();
+        long s = Duration.between(now, now.toLocalDate().plusDays(1).atStartOfDay()).getSeconds();
+        return String.format("%02d:%02d:%02d", s / 3600, (s % 3600) / 60, s % 60);
     }
 
     private void renderQuests(DrawContext ctx) {
@@ -215,31 +240,33 @@ public class StatusScreen extends Screen {
         Holo.panel(ctx, wx, py, W, ph, 1f);
 
         Holo.text(ctx, textRenderer, "Finish all three to earn " + QuestData.REWARD_POINTS + " stat points!",
-                wx + 14, py + 10, Holo.GOLD, 1f);
+                wx + 14, py + 8, Holo.GOLD, 1f);
 
         String[] names = {"Squats  (crouch)", "Jumps", "Sprint  (blocks)"};
         int[] cur = {q.crouches(), q.jumps(), q.sprintBlocks()};
         int[] goal = {QuestData.CROUCH_GOAL, QuestData.JUMP_GOAL, QuestData.SPRINT_BLOCKS_GOAL};
 
         for (int i = 0; i < 3; i++) {
-            int y = py + 36 + i * 34;
+            int y = py + 26 + i * 30;
             int shown = Math.min(cur[i], goal[i]);
             boolean done = cur[i] >= goal[i];
             Holo.text(ctx, textRenderer, names[i], wx + 14, y, done ? Holo.GREEN : Holo.BRIGHT, 1f);
             Holo.right(ctx, textRenderer, shown + " / " + goal[i], wx + W - 14, y, done ? Holo.GREEN : Holo.CYAN, 1f);
-            Holo.bar(ctx, wx + 14, y + 12, W - 28, 8, (float) shown / goal[i], done ? Holo.GREEN : Holo.CYAN, 1f);
+            Holo.bar(ctx, wx + 14, y + 11, W - 28, 8, (float) shown / goal[i], done ? Holo.GREEN : Holo.CYAN, 1f);
         }
 
         if (q.claimed()) {
             Holo.centered(ctx, textRenderer, "ALL QUESTS COMPLETE  -  REWARD CLAIMED",
-                    wx + W / 2, py + ph - 22, Holo.GOLD, 1f, true);
+                    wx + W / 2, py + 118, Holo.GOLD, 1f, true);
         } else {
-            Holo.centered(ctx, textRenderer, "Quests reset every day",
-                    wx + W / 2, py + ph - 22, Holo.DIM, 1f, false);
+            Holo.centered(ctx, textRenderer, "WARNING: Failure triggers a PENALTY QUEST!",
+                    wx + W / 2, py + 118, Holo.RED, 1f, true);
         }
+        Holo.centered(ctx, textRenderer, "Resets at midnight  -  in " + untilMidnight(),
+                wx + W / 2, py + 138, Holo.DIM, 1f, false);
     }
 
-    private void renderShop(DrawContext ctx, SystemData d) {
+    private void renderShop(DrawContext ctx, SystemData d, int mx, int my) {
         int wx = winX();
         int py = panelY();
         int ph = panelH();
@@ -253,7 +280,11 @@ public class StatusScreen extends Screen {
             Holo.text(ctx, textRenderer, e.usage(), wx + 36, ry + 13, Holo.DIM, 1f);
             boolean afford = d.gold() >= e.price();
             Holo.right(ctx, textRenderer, e.price() + " G", wx + W - 62, ry + 7, afford ? Holo.GOLD : 0xFF6666, 1f);
-            if (i < buyButtons.size()) buyButtons.get(i).active = afford;
+            if (i < buyButtons.size()) {
+                ButtonWidget b = buyButtons.get(i);
+                b.active = afford;
+                drawBtn(ctx, b, "Buy", false, mx, my);
+            }
         }
         Holo.text(ctx, textRenderer, "Tip: right-click an item in your inventory to sell it.",
                 wx + 14, py + ph - 16, Holo.DIM, 1f);

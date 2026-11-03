@@ -23,6 +23,7 @@ public class XpHandler {
 
     public static int xpFor(LivingEntity entity) {
         if (entity instanceof EnderDragonEntity) return 5000;
+        if (entity instanceof DesertCentipedeEntity) return 300; // B-Rank
         if (entity instanceof HostileEntity) {
             return Math.max(5, (int) (entity.getMaxHealth() * 2));
         }

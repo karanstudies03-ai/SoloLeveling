@@ -29,11 +29,24 @@ public class SystemCommand {
                                     d.addGold(IntegerArgumentType.getInteger(ctx, "amount")));
                             return 1;
                         })))
+                .then(CommandManager.literal("penalty")
+                    .executes(ctx -> {
+                        ServerPlayerEntity p = ctx.getSource().getPlayerOrThrow();
+                        Penalty.start(ctx.getSource().getServer(), p, true);
+                        return 1;
+                    }))
+                .then(CommandManager.literal("endpenalty")
+                    .executes(ctx -> {
+                        ServerPlayerEntity p = ctx.getSource().getPlayerOrThrow();
+                        Penalty.end(ctx.getSource().getServer(), p, false);
+                        return 1;
+                    }))
                 .then(CommandManager.literal("reset")
                     .executes(ctx -> {
                         ServerPlayerEntity p = ctx.getSource().getPlayerOrThrow();
                         p.setAttached(ModAttachments.SYSTEM, SystemData.DEFAULT);
                         p.setAttached(ModAttachments.QUESTS, QuestData.DEFAULT);
+                        p.setAttached(ModAttachments.PENALTY, PenaltyData.NONE);
                         StatEffects.apply(p);
                         ctx.getSource().sendFeedback(() -> Text.literal("System reset."), false);
                         return 1;
