@@ -24,6 +24,8 @@ import java.util.List;
 public class ModItems {
     /** Effect level shown to the player is BUFF_AMPLIFIER + 1 (9 = level 10). */
     private static final int BUFF_AMPLIFIER = 9;
+    /** Speed is weaker: level 7 (amplifier 6). */
+    private static final int SPEED_AMPLIFIER = 6;
     private static final int BUFF_SECONDS = 30;
 
     public static final Item BEAST_CORE = register("beast_core", Rarity.UNCOMMON,
@@ -33,13 +35,17 @@ public class ModItems {
     public static final Item DRAGON_SCALE = register("dragon_scale", Rarity.RARE,
             food(fx(StatusEffects.RESISTANCE)));
     public static final Item SHADOW_ESSENCE = register("shadow_essence", Rarity.RARE,
-            drink(fx(StatusEffects.SPEED)));
+            drink(speed()));
     public static final Item MONARCH_CORE = register("monarch_core", Rarity.EPIC,
             drink(fx(StatusEffects.STRENGTH), fx(StatusEffects.REGENERATION),
-                    fx(StatusEffects.RESISTANCE), fx(StatusEffects.SPEED)));
+                    fx(StatusEffects.RESISTANCE), speed()));
 
     private static StatusEffectInstance fx(RegistryEntry<StatusEffect> effect) {
         return new StatusEffectInstance(effect, BUFF_SECONDS * 20, BUFF_AMPLIFIER);
+    }
+
+    private static StatusEffectInstance speed() {
+        return new StatusEffectInstance(StatusEffects.SPEED, BUFF_SECONDS * 20, SPEED_AMPLIFIER);
     }
 
     private static ConsumableComponent food(StatusEffectInstance... effects) {

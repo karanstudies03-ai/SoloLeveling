@@ -17,8 +17,8 @@ public final class ShopData {
             new BuyEntry(ModItems.BEAST_CORE, "Eat: Strength X for 30s", 200),
             new BuyEntry(ModItems.DEMON_HEART, "Eat: Regeneration X for 30s", 600),
             new BuyEntry(ModItems.DRAGON_SCALE, "Eat: Resistance X for 30s", 800),
-            new BuyEntry(ModItems.SHADOW_ESSENCE, "Drink: Speed X for 30s", 500),
-            new BuyEntry(ModItems.MONARCH_CORE, "Drink: all 4 buffs X for 30s", 3000)
+            new BuyEntry(ModItems.SHADOW_ESSENCE, "Drink: Speed VII for 30s", 500),
+            new BuyEntry(ModItems.MONARCH_CORE, "Drink: 4 buffs, Speed VII, 30s", 3000)
     );
 
     private static final Map<Item, Integer> SELL = new HashMap<>();

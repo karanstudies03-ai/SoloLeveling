@@ -87,6 +87,8 @@ public class Penalty {
         if (current.active()) return false;
 
         ServerWorld arena = server.getOverworld();
+        // Fresh zone for every penalty: rebuild terrain (holes and placed blocks disappear)
+        if (!anyoneInside(server)) Arena.newSession();
         // Make sure there is ground under the landing spot (a few chunks around the centre)
         Arena.ensureChunks(arena, Arena.CENTER_X >> 4, Arena.CENTER_Z >> 4, 12, Integer.MAX_VALUE);
 
@@ -198,10 +200,15 @@ public class Penalty {
         }
     }
 
-    private static void cleanupIfNobodyInside(MinecraftServer server) {
+    private static boolean anyoneInside(MinecraftServer server) {
         for (ServerPlayerEntity other : server.getPlayerManager().getPlayerList()) {
-            if (other.getAttachedOrCreate(ModAttachments.PENALTY).active()) return;
+            if (other.getAttachedOrCreate(ModAttachments.PENALTY).active()) return true;
         }
+        return false;
+    }
+
+    private static void cleanupIfNobodyInside(MinecraftServer server) {
+        if (anyoneInside(server)) return;
         ServerWorld arena = server.getOverworld();
         List<DesertCentipedeEntity> mobs = arena.getEntitiesByClass(DesertCentipedeEntity.class, Arena.box(),
                 e -> e.getCommandTags().contains(TAG));

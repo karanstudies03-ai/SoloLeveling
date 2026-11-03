@@ -26,7 +26,7 @@ public final class Arena {
     public static final int BASE_Y = 268;
 
     private static final int WALL_THICKNESS = 2;
-    private static final int MARKER_Y = 318;       // a bedrock block here marks "this chunk is generated"
+    private static final int CLEAR_ABOVE = 20;     // blocks above the ground that are wiped on regeneration
     private static final int FLAGS = Block.NOTIFY_LISTENERS;
 
     private static final Set<Long> DONE = new HashSet<>();
@@ -42,6 +42,14 @@ public final class Arena {
     }
 
     private Arena() {}
+
+    /**
+     * Call when a new Penalty starts (and nobody is inside). Every chunk will then be rebuilt from
+     * scratch the next time it is needed, so holes, placed blocks etc. from earlier penalties vanish.
+     */
+    public static void newSession() {
+        DONE.clear();
+    }
 
     // ------------------------------------------------------------------ shape of the land
 
@@ -107,12 +115,11 @@ public final class Arena {
     }
 
     /**
-     * Generates missing chunks around chunk (pcx,pcz) that are within maxDist2 (squared, in chunks),
-     * at most maxNew per call. Returns how many chunks were handled.
+     * (Re)builds chunks around chunk (pcx,pcz) that are within maxDist2 (squared, in chunks) and were
+     * not yet built in the current session, at most maxNew per call. Returns how many were handled.
      */
     public static int ensureChunks(ServerWorld w, int pcx, int pcz, int maxDist2, int maxNew) {
         int handled = 0;
-        BlockPos.Mutable pos = new BlockPos.Mutable();
         for (int[] o : OFFSETS) {
             if (o[0] * o[0] + o[1] * o[1] > maxDist2) break; // list is sorted by distance
             int cx = pcx + o[0];
@@ -126,7 +133,6 @@ public final class Arena {
             double cdx = cx * 16 + 8 - CENTER_X;
             double cdz = cz * 16 + 8 - CENTER_Z;
             if (Math.sqrt(cdx * cdx + cdz * cdz) - 12 > RADIUS + WALL_THICKNESS) continue; // outside the zone
-            if (w.getBlockState(pos.set(cx << 4, MARKER_Y, cz << 4)).isOf(Blocks.BEDROCK)) continue; // done before
             generateChunk(w, cx, cz);
         }
         return handled;
@@ -149,6 +155,7 @@ public final class Arena {
         BlockState barrier = Blocks.BARRIER.getDefaultState();
         BlockState cactus = Blocks.CACTUS.getDefaultState();
         BlockState deadBush = Blocks.DEAD_BUSH.getDefaultState();
+        BlockState air = Blocks.AIR.getDefaultState();
 
         int minX = cx << 4;
         int minZ = cz << 4;
@@ -175,6 +182,14 @@ public final class Arena {
                     }
 
                     int extra = rockExtra(x, z);
+
+                    // wipe anything placed above the ground in earlier penalties
+                    int top = h + extra;
+                    for (int y = top + 1; y <= Math.min(316, top + CLEAR_ABOVE); y++) {
+                        pos.set(x, y, z);
+                        if (!w.getBlockState(pos).isAir()) w.setBlockState(pos, air, FLAGS);
+                    }
+
                     if (extra > 0) {
                         for (int y = h + 1; y <= h + extra; y++) {
                             w.setBlockState(pos.set(x, y, z), rockBlock(y).getDefaultState(), FLAGS);
@@ -197,6 +212,5 @@ public final class Arena {
                 }
             }
         }
-        w.setBlockState(pos.set(minX, MARKER_Y, minZ), bedrock, FLAGS);
     }
 }
