@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "id": "endersystem",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": "EnderSystem",
-  "description": "A Solo Leveling inspired System: levels, ranks, stats, quests, gates and shadows.",
+  "description": "A Solo Leveling inspired System: levels, ranks, stats, daily quests, shop and more.",
   "authors": ["Ender"],
   "license": "MIT",
   "environment": "*",
@@ -11,6 +11,7 @@
     "main": ["com.endersystem.EnderSystem"],
     "client": ["com.endersystem.client.EnderSystemClient"]
   },
+  "mixins": ["endersystem.mixins.json"],
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": "~1.21.11",

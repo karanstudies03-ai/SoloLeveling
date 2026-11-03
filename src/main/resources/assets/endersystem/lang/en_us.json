@@ -1,4 +1,9 @@
 {
   "key.endersystem.open_system": "Open System",
-  "key.category.endersystem.main": "EnderSystem"
+  "key.category.endersystem.main": "EnderSystem",
+  "item.endersystem.beast_core": "Beast Core",
+  "item.endersystem.demon_heart": "Demon Heart",
+  "item.endersystem.dragon_scale": "Dragon Scale",
+  "item.endersystem.shadow_essence": "Shadow Essence",
+  "item.endersystem.monarch_core": "Monarch Core"
 }

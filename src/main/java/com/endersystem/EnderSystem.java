@@ -12,12 +12,13 @@ public class EnderSystem implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        ModItems.init();
         ModAttachments.init();
         ModPackets.init();
         XpHandler.init();
+        QuestTracker.init();
         SystemCommand.init();
 
-        // Re-apply stat bonuses whenever a player joins or respawns.
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 StatEffects.apply(handler.player));
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->

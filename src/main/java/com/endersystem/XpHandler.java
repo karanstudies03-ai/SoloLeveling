@@ -1,7 +1,6 @@
 package com.endersystem;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.boss.dragon.EnderDragonEntity;
 import net.minecraft.entity.mob.HostileEntity;
@@ -15,7 +14,10 @@ public class XpHandler {
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
             if (!(source.getAttacker() instanceof ServerPlayerEntity player)) return;
             int xp = xpFor(entity);
-            if (xp > 0) giveXp(player, xp);
+            if (xp > 0) {
+                int gold = Math.max(1, xp / 5);
+                giveXp(player, xp, gold);
+            }
         });
     }
 
@@ -28,16 +30,21 @@ public class XpHandler {
     }
 
     public static void giveXp(ServerPlayerEntity player, int amount) {
+        giveXp(player, amount, 0);
+    }
+
+    public static void giveXp(ServerPlayerEntity player, int amount, int gold) {
         SystemData before = player.getAttachedOrCreate(ModAttachments.SYSTEM);
-        SystemData after = before.addXp(amount);
+        SystemData after = before.addXp(amount).addGold(gold);
         player.setAttached(ModAttachments.SYSTEM, after);
 
-        player.sendMessage(Text.literal("[SYSTEM] +" + amount + " XP")
-                .formatted(Formatting.AQUA), true);
+        String msg = "[SYSTEM] +" + amount + " XP" + (gold > 0 ? "   +" + gold + " gold" : "");
+        player.sendMessage(Text.literal(msg).formatted(Formatting.AQUA), true);
 
         if (after.level() > before.level()) {
-            ServerPlayNetworking.send(player, new ModPackets.LevelUpPayload(
-                    after.level(), after.statPoints() - before.statPoints()));
+            ModPackets.notify(player, "LEVEL UP!",
+                    "Level " + after.level() + "  |  Rank " + after.rank(),
+                    "+" + (after.statPoints() - before.statPoints()) + " stat points");
         }
     }
 }

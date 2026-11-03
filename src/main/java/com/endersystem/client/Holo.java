@@ -3,13 +3,16 @@ package com.endersystem.client;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
 /** Drawing helpers for the blue hologram look. All colours are RGB; alpha is 0..1. */
 public final class Holo {
     public static final int CYAN = 0x4FC3F7;
     public static final int BRIGHT = 0xBFEFFF;
+    public static final int DIM = 0x7FB8D6;
     public static final int DARK = 0x061A33;
     public static final int GOLD = 0xFFD54F;
+    public static final int GREEN = 0x66FF99;
 
     private Holo() {}
 
@@ -25,10 +28,9 @@ public final class Holo {
         c.fill(x + w - 1, y, x + w, y + h, color);
     }
 
-    /** Translucent dark-blue panel with a glowing cyan border. */
     public static void panel(DrawContext c, int x, int y, int w, int h, float alpha) {
         c.fill(x, y, x + w, y + h, argb(DARK, 0.72f * alpha));
-        frame(c, x - 1, y - 1, w + 2, h + 2, argb(CYAN, 0.25f * alpha)); // glow
+        frame(c, x - 1, y - 1, w + 2, h + 2, argb(CYAN, 0.25f * alpha));
         frame(c, x, y, w, h, argb(CYAN, alpha));
     }
 
@@ -37,12 +39,15 @@ public final class Holo {
     }
 
     public static void bold(DrawContext c, TextRenderer tr, String s, int x, int y, int rgb, float alpha) {
-        c.drawText(tr, Text.literal(s).formatted(net.minecraft.util.Formatting.BOLD),
-                x, y, argb(rgb, alpha), false);
+        c.drawText(tr, Text.literal(s).formatted(Formatting.BOLD), x, y, argb(rgb, alpha), false);
+    }
+
+    public static void right(DrawContext c, TextRenderer tr, String s, int xRight, int y, int rgb, float alpha) {
+        c.drawText(tr, Text.literal(s), xRight - tr.getWidth(s), y, argb(rgb, alpha), false);
     }
 
     public static void centered(DrawContext c, TextRenderer tr, String s, int cx, int y, int rgb, float alpha, boolean bold) {
-        Text t = bold ? Text.literal(s).formatted(net.minecraft.util.Formatting.BOLD) : Text.literal(s);
+        Text t = bold ? Text.literal(s).formatted(Formatting.BOLD) : Text.literal(s);
         c.drawText(tr, t, cx - tr.getWidth(t) / 2, y, argb(rgb, alpha), false);
     }
 

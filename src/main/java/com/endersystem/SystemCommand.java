@@ -6,7 +6,7 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 
-/** Admin/testing commands only. Players use the K key. */
+/** Admin/testing commands only (op). Players use the K key. */
 public class SystemCommand {
 
     public static void init() {
@@ -20,10 +20,20 @@ public class SystemCommand {
                             XpHandler.giveXp(p, IntegerArgumentType.getInteger(ctx, "amount"));
                             return 1;
                         })))
+                .then(CommandManager.literal("addgold")
+                    .then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
+                        .executes(ctx -> {
+                            ServerPlayerEntity p = ctx.getSource().getPlayerOrThrow();
+                            SystemData d = p.getAttachedOrCreate(ModAttachments.SYSTEM);
+                            p.setAttached(ModAttachments.SYSTEM,
+                                    d.addGold(IntegerArgumentType.getInteger(ctx, "amount")));
+                            return 1;
+                        })))
                 .then(CommandManager.literal("reset")
                     .executes(ctx -> {
                         ServerPlayerEntity p = ctx.getSource().getPlayerOrThrow();
                         p.setAttached(ModAttachments.SYSTEM, SystemData.DEFAULT);
+                        p.setAttached(ModAttachments.QUESTS, QuestData.DEFAULT);
                         StatEffects.apply(p);
                         ctx.getSource().sendFeedback(() -> Text.literal("System reset."), false);
                         return 1;

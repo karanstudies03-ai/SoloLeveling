@@ -18,22 +18,16 @@ public class StatEffects {
 
     public static void apply(ServerPlayerEntity p) {
         SystemData d = p.getAttachedOrCreate(ModAttachments.SYSTEM);
-        // +0.5 attack damage per STR point
         set(p, EntityAttributes.ATTACK_DAMAGE, STR, (d.strength() - 10) * 0.5,
                 EntityAttributeModifier.Operation.ADD_VALUE);
-        // +1% movement speed per AGI point
         set(p, EntityAttributes.MOVEMENT_SPEED, AGI, (d.agility() - 10) * 0.01,
                 EntityAttributeModifier.Operation.ADD_MULTIPLIED_BASE);
-        // +1 max health (half a heart) per VIT point
         set(p, EntityAttributes.MAX_HEALTH, VIT, (d.vitality() - 10) * 1.0,
                 EntityAttributeModifier.Operation.ADD_VALUE);
-        // +0.5 armor per DEF point
         set(p, EntityAttributes.ARMOR, DEF, (d.defence() - 10) * 0.5,
                 EntityAttributeModifier.Operation.ADD_VALUE);
-        // +0.2 luck per LUK point
         set(p, EntityAttributes.LUCK, LUK, (d.luck() - 10) * 0.2,
                 EntityAttributeModifier.Operation.ADD_VALUE);
-        // INT (mana) is used later, when skills are added.
     }
 
     private static void set(ServerPlayerEntity p, RegistryEntry<EntityAttribute> attribute,
